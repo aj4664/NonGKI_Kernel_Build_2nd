@@ -151,7 +151,7 @@ runs:
         if: env.KPM_ENABLE == 'true'
         shell: bash
         run: |
-          cd $GITHUB_WORKSPACE/device_kerne
+          cd $GITHUB_WORKSPACE/device_kernel
              echo "CONFIG_KPM=y" >> ./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
              ${{ env.CURLX }} "${{ env.KPM_PATCH_SOURCE }}" patch
              chmod a+x patch
