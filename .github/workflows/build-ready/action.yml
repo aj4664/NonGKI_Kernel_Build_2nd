@@ -148,30 +148,43 @@ runs:
           fi
 
       - name: KPM Function Support
-        if: env.KPM_ENABLE == 'true'
-        shell: bash
-        run: |
-          cd $GITHUB_WORKSPACE/device_kernel
+  if: env.KPM_ENABLE == 'true'
+  shell: bash
+  run: |
+    cd $GITHUB_WORKSPACE/device_kernel
 
-# 不再检查 KPM 是否可以支持，直接执行以下操作
-echo "Skipping KPM support check..."
+    # Skip the directory check and directly proceed
+    # if [[ -d "${{ env.KERNELSU_NAME }}/kernel/kpm" ]]; then
 
-# 假设我们仍然想要进行一些配置和补丁工作
-echo "CONFIG_KPM=y" >> ./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
+      # Skip the file existence check for set_memory.h
+      # if [ -f "include/linux/set_memory.h" ]; then
+          echo "CONFIG_KPM=y" >> ./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
+          ${{ env.CURLX }} "${{ env.KPM_PATCH_SOURCE }}" patch
+          chmod a+x patch
+          echo "Set KPM successfully !"
+      # else
+          # Skipping version checks
+          cp /tmp/Patches/Patch/set_memory_to_49_and_low.patch ./
+          patch -p1 < set_memory_to_49_and_low.patch || true
+          echo "CONFIG_KPM=y" >> ./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
+          ${{ env.CURLX }} "${{ env.KPM_PATCH_SOURCE }}" patch
+          chmod a+x patch
+          echo "Patch set_memory successfully !"
+          echo "If have patch error (.rej), manual fixed it."
+      # fi
+    # else
+      # echo "KernelSU cannot support KPM !"
+      # false
+    # fi
 
-# 如果需要下载和应用补丁，继续执行
-${{ env.CURLX }} "${{ env.KPM_PATCH_SOURCE }}" patch
-chmod a+x patch
+    # Fixed stack frame overflow vulnerability
+    if [[ "${{ env.KPM_FIX }}" == "true" ]]; then
+      cd ${{ env.KERNELSU_NAME }}/kernel/kpm
+      cp /tmp/Patches/Patch/fix_kpm.patch ./
+      patch -p1 < fix_kpm.patch || true
+    fi
 
-echo "KPM configuration and patch application completed, regardless of support status."
-
-
-          # Fixed stack frame overflow vulnerability
-          if [[ "${{ env.KPM_FIX }}" == "true" ]]; then
-            cd ${{ env.KERNELSU_NAME }}/kernel/kpm
-            cp /tmp/Patches/Patch/fix_kpm.patch ./
-            patch -p1 < fix_kpm.patch || true
-          fi
+   
 
       - name: Set KSU and SUSFS for DEFCONFIG
         shell: bash
